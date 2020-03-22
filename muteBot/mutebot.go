@@ -13,6 +13,7 @@ import (
 
 // MuteBot is used to restrict people to using only the words in the WordsFile field of struct MuteBotConfig.
 type MuteBot struct {
+	session         *discordgo.Session
 	wordStore       *wordMap.WordMap
 	botToken        string
 	commandPrefix   string
@@ -49,14 +50,15 @@ type MuteBotConfig struct {
 func NewMuteBot(config MuteBotConfig) (mb *MuteBot) {
 	ws := getWordStore(config.WordsFile)
 	mb = &MuteBot{
-		wordStore:       ws,
-		botToken:        config.BotToken,
-		commandPrefix:   config.CommandPrefix,
-		guildID:         config.ServerID,
-		admins:          config.Admins,
-		mutedUsers:      config.MutedUsers,
-		muAdmins:        sync.Mutex{},
-		muMutedUsers:    sync.Mutex{},
+		session:       nil,
+		wordStore:     ws,
+		botToken:      config.BotToken,
+		commandPrefix: config.CommandPrefix,
+		guildID:       config.ServerID,
+		admins:        config.Admins,
+		mutedUsers:    config.MutedUsers,
+		muAdmins:      sync.Mutex{},
+		muMutedUsers:  sync.Mutex{},
 		AfterUserUpdate: func() {
 
 		},
@@ -73,8 +75,8 @@ func (mb *MuteBot) Serve(ctx context.Context) {
 	}
 	defer dg.Close()
 
-	dg.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		handlerMessageCreate(s, m, mb)
+	dg.AddHandler(func(sess *discordgo.Session, m *discordgo.MessageCreate) {
+		mb.handlerMessageCreate(sess, m)
 	})
 
 	err = dg.Open()
@@ -141,25 +143,26 @@ func inSlice(slice []string, s string) bool {
 }
 
 // todo: combat against message edits
-func handlerMessageCreate(s *discordgo.Session, msgEv *discordgo.MessageCreate, bot *MuteBot) { //todo: consider moving all mutex to handlerMessageCreate
-	defer bot.muCommandPrefix.Unlock()
-	bot.muCommandPrefix.Lock()
-	if msgHasCommandPrefix(msgEv.Content, bot.commandPrefix) {
-		processCommands(bot, msgEv, s)
+func (mb *MuteBot) handlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) { //todo: consider moving all mutex to handlerMessageCreate
+	mb.session = sess
+	defer mb.muCommandPrefix.Unlock()
+	mb.muCommandPrefix.Lock()
+	if msgHasCommandPrefix(msgEv.Content, mb.commandPrefix) {
+		mb.processCommands(msgEv)
 		return
 	}
-	decideMessageRemoval(bot, msgEv, s)
+	mb.decideMessageRemoval(msgEv)
 }
 
-func decideMessageRemoval(bot *MuteBot, msgEv *discordgo.MessageCreate, s *discordgo.Session) {
-	defer bot.muMutedUsers.Unlock()
-	bot.muMutedUsers.Lock()
-	if inSlice(bot.mutedUsers, msgEv.Author.ID) {
-		badWords := badWords(msgEv, bot.wordStore)
+func (mb *MuteBot) decideMessageRemoval(msgEv *discordgo.MessageCreate) {
+	defer mb.muMutedUsers.Unlock()
+	mb.muMutedUsers.Lock()
+	if inSlice(mb.mutedUsers, msgEv.Author.ID) {
+		badWords := badWords(msgEv, mb.wordStore)
 		if !(len(badWords) > 0) {
 			return
 		}
-		s.ChannelMessageDelete(msgEv.ChannelID, msgEv.ID)
+		mb.session.ChannelMessageDelete(msgEv.ChannelID, msgEv.ID)
 
 		notice := "You can only talk with the ten hundred most used words now. https://xkcd.com/simplewriter/\nThese words are not simple: "
 
@@ -170,20 +173,20 @@ func decideMessageRemoval(bot *MuteBot, msgEv *discordgo.MessageCreate, s *disco
 			}
 		}
 		notice += "\nPlease try again."
-		defer bot.muAdmins.Unlock()
-		bot.muAdmins.Lock()
-		if inSlice(bot.admins, msgEv.Author.ID) {
-			notice += "\nPaste `" + bot.commandPrefix + " unmute " + msgEv.Author.ID + "` in the server to unmute yourself. [This line is displayed to admins only]"
+		defer mb.muAdmins.Unlock()
+		mb.muAdmins.Lock()
+		if inSlice(mb.admins, msgEv.Author.ID) {
+			notice += "\nPaste `" + mb.commandPrefix + " unmute " + msgEv.Author.ID + "` in the server to unmute yourself. [This line is displayed to admins only]"
 		}
 
-		sendPrivateMessage(s, msgEv.Author.ID, notice)
+		sendPrivateMessage(mb.session, msgEv.Author.ID, notice)
 	}
 }
 
 // todo: allow punctuation, strip punctuation when testing
 // todo: check if player target is actually a playerID
-func processCommands(bot *MuteBot, msgEv *discordgo.MessageCreate, s *discordgo.Session) {
-	if !inSlice(bot.admins, msgEv.Author.ID) {
+func (mb *MuteBot) processCommands(msgEv *discordgo.MessageCreate) {
+	if !inSlice(mb.admins, msgEv.Author.ID) {
 		return
 	}
 
@@ -194,7 +197,7 @@ func processCommands(bot *MuteBot, msgEv *discordgo.MessageCreate, s *discordgo.
 	cmd := msg[1]
 
 	if cmd == "help" {
-		sendPMHelp(s, msgEv.Author.ID, bot.commandPrefix)
+		sendPMHelp(mb.session, msgEv.Author.ID, mb.commandPrefix)
 		return
 	}
 
@@ -202,83 +205,76 @@ func processCommands(bot *MuteBot, msgEv *discordgo.MessageCreate, s *discordgo.
 		thirdArgument := parseUserID(msg[2]) // userID for mute, unmute todo: check if user exists on server
 
 		if cmd == "prefix" {
-			bot.commandPrefix = thirdArgument
-			sendPrivateMessage(s, msgEv.Author.ID, "This bot will now respond to **"+bot.commandPrefix+"**")
+			mb.commandPrefix = thirdArgument
+			sendPrivateMessage(mb.session, msgEv.Author.ID, "This mb will now respond to **"+mb.commandPrefix+"**")
 			return
 		}
 
 		if cmd == "mute" {
-			mute(s, bot, thirdArgument, msgEv)
+			mb.muteProcedure(thirdArgument, msgEv)
 			return
 		}
 
 		if cmd == "unmute" {
-			unmute(s, bot, thirdArgument, msgEv)
+			mb.unmuteProcedure(thirdArgument, msgEv)
 			return
 		}
 	}
-	sendPrivateMessage(s, msgEv.Author.ID, "Invalid command. Try "+bot.commandPrefix+" mute @USER")
+	sendPrivateMessage(mb.session, msgEv.Author.ID, "Invalid command. Try "+mb.commandPrefix+" mute @USER")
 	return
 }
 
-func unmute(s *discordgo.Session, bot *MuteBot, targetUser string, msgEv *discordgo.MessageCreate) {
-	if !userExistsInGuild(s, msgEv.GuildID, targetUser) {
-		sendPrivateMessage(s, msgEv.Author.ID, "User does not exist in this server.")
+func (mb *MuteBot) unmuteProcedure(targetUser string, msgEv *discordgo.MessageCreate) {
+	if !userExistsInGuild(mb.session, msgEv.GuildID, targetUser) {
+		sendPrivateMessage(mb.session, msgEv.Author.ID, "User does not exist in this server.")
 		return
 	}
 
-	alreadyUnmuted := unmuteUser(s, bot, targetUser)
+	alreadyUnmuted := mb.unmuteUser(mb.session, targetUser)
 	if alreadyUnmuted {
-		sendPrivateMessage(s, msgEv.Author.ID, "That user is not muted.")
+		sendPrivateMessage(mb.session, msgEv.Author.ID, "That user is not muted.")
 		return
 	}
-	bot.muAfterUserUpdate.Lock()
-	bot.AfterUserUpdate()
-	bot.muAfterUserUpdate.Unlock()
-	s.ChannelMessageSend(msgEv.ChannelID, "<@"+targetUser+"> can talk with any words now.")
+	mb.muAfterUserUpdate.Lock()
+	mb.AfterUserUpdate()
+	mb.muAfterUserUpdate.Unlock()
+	mb.session.ChannelMessageSend(msgEv.ChannelID, "<@"+targetUser+"> can talk with any words now.")
 	return
 }
 
-func mute(s *discordgo.Session, bot *MuteBot, targetUser string, msgEv *discordgo.MessageCreate) {
-	if !userExistsInGuild(s, msgEv.GuildID, targetUser) {
-		sendPrivateMessage(s, msgEv.Author.ID, "User does not exist in this server.")
+func (mb *MuteBot) muteProcedure(targetUser string, msgEv *discordgo.MessageCreate) {
+	if !userExistsInGuild(mb.session, msgEv.GuildID, targetUser) {
+		sendPrivateMessage(mb.session, msgEv.Author.ID, "User does not exist in this server.")
 		return
 	}
 
-	alreadyMuted := muteUser(s, bot, targetUser)
+	alreadyMuted := mb.muteUser(targetUser)
 	if alreadyMuted {
-		sendPrivateMessage(s, msgEv.Author.ID, "That user is already muted.")
+		sendPrivateMessage(mb.session, msgEv.Author.ID, "That user is already muted.")
 		return
 	}
-	bot.muAfterUserUpdate.Lock()
-	bot.AfterUserUpdate()
-	bot.muAfterUserUpdate.Unlock()
-	s.ChannelMessageSend(msgEv.ChannelID, "<@"+targetUser+"> can only talk with the ten hundred most used words now (simple words).")
+	mb.muAfterUserUpdate.Lock()
+	mb.AfterUserUpdate()
+	mb.muAfterUserUpdate.Unlock()
+	mb.session.ChannelMessageSend(msgEv.ChannelID, "<@"+targetUser+"> can only talk with the ten hundred most used words now (simple words).")
 	return
 }
 
-func sendPMHelp(session *discordgo.Session, userID string, cmdPrefix string) {
-	cmd1 := fmt.Sprintf("**%v unmute (@User)** - Unmutes a user\n", cmdPrefix)
-	cmd2 := fmt.Sprintf("**%v mute (@User)** - Restricts a user to using only the 1000 most common words.\n", cmdPrefix)
-	cmd3 := fmt.Sprintf("**%v prefix (yourNewPrefix)** - Changes the prefix this bot responds to. Currently set to **%v **\n", cmdPrefix, cmdPrefix)
-	sendPrivateMessage(session, userID, cmd1+cmd2+cmd3)
-}
-
-func muteUser(s *discordgo.Session, bot *MuteBot, targetUser string) (alreadyMuted bool) {
-	if inSlice(bot.mutedUsers, targetUser) {
+func (mb *MuteBot) muteUser(targetUser string) (alreadyMuted bool) {
+	if inSlice(mb.mutedUsers, targetUser) {
 		return true
 	}
-	bot.muMutedUsers.Lock()
-	bot.mutedUsers = append(bot.mutedUsers, targetUser)
-	bot.muMutedUsers.Unlock()
+	mb.muMutedUsers.Lock()
+	mb.mutedUsers = append(mb.mutedUsers, targetUser)
+	mb.muMutedUsers.Unlock()
 	return false
 }
 
-func unmuteUser(s *discordgo.Session, bot *MuteBot, targetUser string) (alreadyUnmuted bool) {
-	defer bot.muMutedUsers.Unlock()
-	bot.muMutedUsers.Lock()
+func (mb *MuteBot) unmuteUser(s *discordgo.Session, targetUser string) (alreadyUnmuted bool) {
+	defer mb.muMutedUsers.Unlock()
+	mb.muMutedUsers.Lock()
 	userIndex := -1
-	for i, name := range bot.mutedUsers {
+	for i, name := range mb.mutedUsers {
 		if targetUser == name {
 			userIndex = i
 		}
@@ -286,7 +282,7 @@ func unmuteUser(s *discordgo.Session, bot *MuteBot, targetUser string) (alreadyU
 	if userIndex == -1 {
 		return true
 	}
-	bot.mutedUsers = append(bot.mutedUsers[:userIndex], bot.mutedUsers[userIndex+1:]...)
+	mb.mutedUsers = append(mb.mutedUsers[:userIndex], mb.mutedUsers[userIndex+1:]...)
 	return false
 }
 
@@ -297,6 +293,13 @@ func msgHasCommandPrefix(msg, cmdPrefix string) bool {
 func sendPrivateMessage(s *discordgo.Session, userID, msg string) {
 	chann, _ := s.UserChannelCreate(userID) // uses existing channel if its already created
 	s.ChannelMessageSend(chann.ID, msg)
+}
+
+func sendPMHelp(session *discordgo.Session, userID string, cmdPrefix string) {
+	cmd1 := fmt.Sprintf("**%v unmute (@User)** - Unmutes a user\n", cmdPrefix)
+	cmd2 := fmt.Sprintf("**%v mute (@User)** - Restricts a user to using only the 1000 most common words.\n", cmdPrefix)
+	cmd3 := fmt.Sprintf("**%v prefix (yourNewPrefix)** - Changes the prefix this bot responds to. Currently set to **%v **\n", cmdPrefix, cmdPrefix)
+	sendPrivateMessage(session, userID, cmd1+cmd2+cmd3)
 }
 
 func parseUserID(s string) string {
