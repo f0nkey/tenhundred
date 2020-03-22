@@ -1,6 +1,6 @@
 # Ten Hundred Bot
 A [Discord](https://discordapp.com/) bot inspired by [xkcd's Simple Writer](https://xkcd.com/simplewriter/) and [Factorio's Discord](https://discord.gg/kvgdT24) channel #ten-hundred.
-- Set a Discord channel where only the 1000(ten hundred) most common words in English can be used.
+- Set a channel where only the 1000(ten hundred) most common words in English can be used.
 - "Mutes" a user, restricting them to the 1000 most common words.
 
 ![Invite Ten Hundred Bot](https://i.imgur.com/4gF2uIe.png)
