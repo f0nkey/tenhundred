@@ -45,8 +45,8 @@ type MuteBotConfig struct {
 	AfterUserUpdate func()
 }
 
-// NewMuteBot returns a MuteBot, and a channel to receive user changes on.
-func NewMuteBot(config MuteBotConfig, afterUserUpdate func()) (mb *MuteBot) {
+// NewMuteBot returns a MuteBot.
+func NewMuteBot(config MuteBotConfig) (mb *MuteBot) {
 	ws := getWordStore(config.WordsFile)
 	mb = &MuteBot{
 		wordStore:       ws,
@@ -57,7 +57,9 @@ func NewMuteBot(config MuteBotConfig, afterUserUpdate func()) (mb *MuteBot) {
 		mutedUsers:      config.MutedUsers,
 		muAdmins:        sync.Mutex{},
 		muMutedUsers:    sync.Mutex{},
-		AfterUserUpdate: afterUserUpdate,
+		AfterUserUpdate: func() {
+
+		},
 	}
 	return mb
 }

@@ -34,7 +34,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	mb := muteBot.NewMuteBot(mbconf, func() {}) // wordList.txt taken from https://xkcd.com/simplewriter/ aka https://xkcd.com/simplewriter/words.js
+	mb := muteBot.NewMuteBot(mbconf) // wordList.txt taken from https://xkcd.com/simplewriter/ aka https://xkcd.com/simplewriter/words.js
 	updateJSONfile := func() {
 		updateJSONConfigFile(mbconf, mb.Admins(), mb.MutedUsers())
 	}
