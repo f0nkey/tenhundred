@@ -11,12 +11,13 @@ import (
 )
 
 type JSONConfig struct {
-	WordsFile     string   `json:"wordsFile"`
-	CommandPrefix string   `json:"commandPrefix"`
-	BotToken      string   `json:"botToken"`
-	ServerID      string   `json:"serverID"`
-	Admins        []string `json:"admins"`
-	MutedUsers    []string `json:"mutedUsers"`
+	WordsFile      string   `json:"wordsFile"`
+	CommandPrefix  string   `json:"commandPrefix"`
+	BotToken       string   `json:"botToken"`
+	ServerID       string   `json:"serverID"`
+	MutedChannelID string   `json:"mutedChannelID"`
+	Admins         []string `json:"admins"`
+	MutedUsers     []string `json:"mutedUsers"`
 }
 
 func main() {
@@ -34,9 +35,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	mb := muteBot.NewMuteBot(mbconf) // wordList.txt taken from https://xkcd.com/simplewriter/ aka https://xkcd.com/simplewriter/words.js
+	mb := muteBot.NewMuteBot(mbconf)
 	updateJSONfile := func() {
-		updateJSONConfigFile(mbconf, mb.Admins(), mb.MutedUsers())
+		updateJSONConfigFile(mbconf, mb.Admins(), mb.MutedUsers(), mb.MutedChannelID())
 	}
 	mb.SetAfterUpdateFunc(updateJSONfile)
 	mb.Serve(context.Background())
@@ -44,10 +45,11 @@ func main() {
 
 func createDefaultConfigFile() {
 	def := JSONConfig{
-		WordsFile:     "wordList.txt",
+		WordsFile:     "wordList.txt", // wordList.txt taken from https://xkcd.com/simplewriter/words.js, removed "fuck" and "shit"
 		CommandPrefix: "!th",
 		BotToken:      "",
 		ServerID:      "",
+		MutedChannelID:"",
 		Admins:        []string{},
 		MutedUsers:    []string{},
 	}
@@ -60,12 +62,13 @@ func createDefaultConfigFile() {
 	ioutil.WriteFile("config.json", jsBytes, 0644)
 }
 
-func updateJSONConfigFile(mbconf muteBot.MuteBotConfig, admins, mutedUsers []string) {
+func updateJSONConfigFile(mbconf muteBot.MuteBotConfig, admins, mutedUsers []string, mutedChannelID string) {
 	jsConf := JSONConfig{
 		WordsFile:     mbconf.WordsFile,
 		CommandPrefix: mbconf.CommandPrefix,
 		BotToken:      mbconf.BotToken,
-		ServerID:      mbconf.ServerID,
+		ServerID:      mbconf.ServerID, //todo fix putting updated serverID in
+		MutedChannelID:mutedChannelID,
 		Admins:        admins,
 		MutedUsers:    mutedUsers,
 	}
