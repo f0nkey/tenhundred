@@ -76,7 +76,7 @@ func (mb *MuteBot) Serve(ctx context.Context) {
 	defer dg.Close()
 
 	dg.AddHandler(func(sess *discordgo.Session, m *discordgo.MessageCreate) {
-		mb.handlerMessageCreate(sess, m)
+		mb.HandlerMessageCreate(sess, m)
 	})
 
 	err = dg.Open()
@@ -143,7 +143,7 @@ func inSlice(slice []string, s string) bool {
 }
 
 // todo: combat against message edits
-func (mb *MuteBot) handlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) { //todo: consider moving all mutex to handlerMessageCreate
+func (mb *MuteBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) { //todo: consider moving all mutex to HandlerMessageCreate
 	mb.session = sess
 	defer mb.muCommandPrefix.Unlock()
 	mb.muCommandPrefix.Lock()
