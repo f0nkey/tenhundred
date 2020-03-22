@@ -22,7 +22,7 @@ type JSONConfig struct {
 func main() {
 	configBytes, err := ioutil.ReadFile("config.json")
 	if err != nil {
-		if strings.Contains(err.Error(),"The system cannot find the file specified.") {
+		if strings.Contains(err.Error(), "The system cannot find the file specified.") {
 			createDefaultConfigFile()
 			fmt.Println("Created a default config file in this directory. Rerun after populating it.")
 		}
@@ -43,7 +43,7 @@ func main() {
 }
 
 func createDefaultConfigFile() {
-	def := JSONConfig {
+	def := JSONConfig{
 		WordsFile:     "wordList.txt",
 		CommandPrefix: "!th",
 		BotToken:      "",
@@ -52,12 +52,12 @@ func createDefaultConfigFile() {
 		MutedUsers:    []string{},
 	}
 
-	jsBytes, err := json.MarshalIndent(def,"","    ")
+	jsBytes, err := json.MarshalIndent(def, "", "    ")
 	if err != nil {
 		log.Fatal("createDefaultConfigFile:", err)
 	}
 
-	ioutil.WriteFile("config.json", jsBytes,0644)
+	ioutil.WriteFile("config.json", jsBytes, 0644)
 }
 
 func updateJSONConfigFile(mbconf muteBot.MuteBotConfig, admins, mutedUsers []string) {
@@ -70,11 +70,11 @@ func updateJSONConfigFile(mbconf muteBot.MuteBotConfig, admins, mutedUsers []str
 		MutedUsers:    mutedUsers,
 	}
 
-	jsonBytes, err := json.MarshalIndent(jsConf,"","    ")
+	jsonBytes, err := json.MarshalIndent(jsConf, "", "    ")
 	if err != nil {
 		log.Fatal("updateJSONfile", err)
 	}
-	err = ioutil.WriteFile("config.json", jsonBytes,0644)
+	err = ioutil.WriteFile("config.json", jsonBytes, 0644)
 	if err != nil {
 		log.Fatal("updateJSONfile", err)
 	}

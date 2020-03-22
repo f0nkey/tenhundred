@@ -12,7 +12,6 @@ type WordMap struct {
 	wordMap map[string]struct{}
 }
 
-
 func (ws WordMap) Exists(s string) bool {
 	if _, exists := ws.wordMap[strings.ToLower(s)]; exists {
 		return true
@@ -25,7 +24,7 @@ func NewWordMap(words io.Reader) (*WordMap, error) {
 	wordsBytes, err := ioutil.ReadAll(words)
 	if err != nil {
 		log.Println("NewWordMap:", err)
-		return nil, fmt.Errorf("NewWordMap: %v",  err)
+		return nil, fmt.Errorf("NewWordMap: %v", err)
 	}
 
 	var wordMap = make(map[string]struct{})
@@ -41,4 +40,3 @@ func NewWordMap(words io.Reader) (*WordMap, error) {
 	return &WordMap{wordMap}, nil
 
 }
-

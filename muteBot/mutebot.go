@@ -21,26 +21,26 @@ type MuteBot struct {
 	mutedUsers      []string
 	AfterUserUpdate func()
 
-	muAdmins sync.Mutex
-	muMutedUsers sync.Mutex
+	muAdmins          sync.Mutex
+	muMutedUsers      sync.Mutex
 	muAfterUserUpdate sync.Mutex
-	muCommandPrefix sync.Mutex
+	muCommandPrefix   sync.Mutex
 }
 
 // MuteBotConfig is used with NewMuteBot.
 type MuteBotConfig struct {
 	// The only words a muted user is allowed to say.
-	WordsFile     string   `json:"wordsFile"`
+	WordsFile string `json:"wordsFile"`
 	// Command prefix this bot listens to .
-	CommandPrefix string   `json:"commandPrefix"`
+	CommandPrefix string `json:"commandPrefix"`
 	// BotToken provided by Discord.
-	BotToken      string   `json:"botToken"`
+	BotToken string `json:"botToken"`
 	// ServerID this specific bot operates on.
-	ServerID      string   `json:"guildID"`
+	ServerID string `json:"guildID"`
 	// Admin IDs that can mute players.
-	Admins        []string `json:"admins"`
+	Admins []string `json:"admins"`
 	// Muted User IDs that can only talk with the words in WordsFile
-	MutedUsers    []string `json:"mutedUsers"`
+	MutedUsers []string `json:"mutedUsers"`
 	// Called after every change to MutedUsers
 	AfterUserUpdate func()
 }
@@ -48,7 +48,7 @@ type MuteBotConfig struct {
 // NewMuteBot returns a MuteBot, and a channel to receive user changes on.
 func NewMuteBot(config MuteBotConfig, afterUserUpdate func()) (mb *MuteBot) {
 	ws := getWordStore(config.WordsFile)
-	mb = &MuteBot {
+	mb = &MuteBot{
 		wordStore:       ws,
 		botToken:        config.BotToken,
 		commandPrefix:   config.CommandPrefix,
@@ -71,7 +71,7 @@ func (mb *MuteBot) Serve(ctx context.Context) {
 	}
 	defer dg.Close()
 
-	dg.AddHandler(func (s *discordgo.Session, m *discordgo.MessageCreate) {
+	dg.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		handlerMessageCreate(s, m, mb)
 	})
 
@@ -81,7 +81,7 @@ func (mb *MuteBot) Serve(ctx context.Context) {
 		return
 	}
 	fmt.Println("Serving")
-	<- ctx.Done()
+	<-ctx.Done()
 }
 
 // Admins returns a string array of admin IDs.
@@ -119,19 +119,14 @@ func (mb *MuteBot) SetAfterUpdateFunc(update func()) {
 	mb.AfterUserUpdate = update
 }
 
-// Gets the users in the guild
-func getMembers(s *discordgo.Session, bot *MuteBot) ([]*discordgo.Member, error) {
-	var thisGuild *discordgo.Guild
-	for _, guild := range s.State.Guilds {
-		if guild.ID == bot.guildID {
-			thisGuild = guild
-		}
+func userExistsInGuild(s *discordgo.Session, guildID, userID string) bool {
+	_, err := s.GuildMember(guildID, userID)
+	if err != nil {
+		fmt.Println(err)
+		return false
 	}
-	if thisGuild == nil {
-		return nil, fmt.Errorf("getMembers", "guild not found")
-	}
-	return thisGuild.Members, nil
 
+	return true
 }
 
 func inSlice(slice []string, s string) bool {
@@ -166,9 +161,11 @@ func decideMessageRemoval(bot *MuteBot, msgEv *discordgo.MessageCreate, s *disco
 
 		notice := "You can only talk with the ten hundred most used words now. https://xkcd.com/simplewriter/\nThese words are not simple: "
 
-		for i , badWord := range badWords {
+		for i, badWord := range badWords {
 			notice += badWord
-			if i != len(badWords)-1 { notice += ", "}
+			if i != len(badWords)-1 {
+				notice += ", "
+			}
 		}
 		notice += "\nPlease try again."
 		defer bot.muAdmins.Unlock()
@@ -188,7 +185,7 @@ func processCommands(bot *MuteBot, msgEv *discordgo.MessageCreate, s *discordgo.
 		return
 	}
 
-	msg := strings.Split(msgEv.Content," ")
+	msg := strings.Split(msgEv.Content, " ")
 	if !(len(msg) >= 2) {
 		return
 	}
@@ -199,12 +196,12 @@ func processCommands(bot *MuteBot, msgEv *discordgo.MessageCreate, s *discordgo.
 		return
 	}
 
-	if (len(msg) >= 3) {
+	if len(msg) >= 3 {
 		thirdArgument := parseUserID(msg[2]) // userID for mute, unmute todo: check if user exists on server
 
 		if cmd == "prefix" {
 			bot.commandPrefix = thirdArgument
-			sendPrivateMessage(s, msgEv.Author.ID,"This bot will now respond to **" + bot.commandPrefix + "**")
+			sendPrivateMessage(s, msgEv.Author.ID, "This bot will now respond to **"+bot.commandPrefix+"**")
 			return
 		}
 
@@ -223,6 +220,11 @@ func processCommands(bot *MuteBot, msgEv *discordgo.MessageCreate, s *discordgo.
 }
 
 func unmute(s *discordgo.Session, bot *MuteBot, targetUser string, msgEv *discordgo.MessageCreate) {
+	if !userExistsInGuild(s, msgEv.GuildID, targetUser) {
+		sendPrivateMessage(s, msgEv.Author.ID, "User does not exist in this server.")
+		return
+	}
+
 	alreadyUnmuted := unmuteUser(s, bot, targetUser)
 	if alreadyUnmuted {
 		sendPrivateMessage(s, msgEv.Author.ID, "That user is not muted.")
@@ -236,6 +238,11 @@ func unmute(s *discordgo.Session, bot *MuteBot, targetUser string, msgEv *discor
 }
 
 func mute(s *discordgo.Session, bot *MuteBot, targetUser string, msgEv *discordgo.MessageCreate) {
+	if !userExistsInGuild(s, msgEv.GuildID, targetUser) {
+		sendPrivateMessage(s, msgEv.Author.ID, "User does not exist in this server.")
+		return
+	}
+
 	alreadyMuted := muteUser(s, bot, targetUser)
 	if alreadyMuted {
 		sendPrivateMessage(s, msgEv.Author.ID, "That user is already muted.")
@@ -252,7 +259,7 @@ func sendPMHelp(session *discordgo.Session, userID string, cmdPrefix string) {
 	cmd1 := fmt.Sprintf("**%v unmute (@User)** - Unmutes a user\n", cmdPrefix)
 	cmd2 := fmt.Sprintf("**%v mute (@User)** - Restricts a user to using only the 1000 most common words.\n", cmdPrefix)
 	cmd3 := fmt.Sprintf("**%v prefix (yourNewPrefix)** - Changes the prefix this bot responds to. Currently set to **%v **\n", cmdPrefix, cmdPrefix)
-	sendPrivateMessage(session,userID,cmd1+cmd2+cmd3)
+	sendPrivateMessage(session, userID, cmd1+cmd2+cmd3)
 }
 
 func muteUser(s *discordgo.Session, bot *MuteBot, targetUser string) (alreadyMuted bool) {
@@ -285,7 +292,7 @@ func msgHasCommandPrefix(msg, cmdPrefix string) bool {
 	return len(msg) > len(cmdPrefix) && msg[0:len(cmdPrefix)] == cmdPrefix
 }
 
-func sendPrivateMessage( s *discordgo.Session, userID, msg string,) {
+func sendPrivateMessage(s *discordgo.Session, userID, msg string) {
 	chann, _ := s.UserChannelCreate(userID) // uses existing channel if its already created
 	s.ChannelMessageSend(chann.ID, msg)
 }
@@ -293,7 +300,7 @@ func sendPrivateMessage( s *discordgo.Session, userID, msg string,) {
 func parseUserID(s string) string {
 	mentionPrefix := "<@!"
 	if len(s) > len(mentionPrefix) && s[:len(mentionPrefix)] == mentionPrefix { // they sent a mention
-		return s[len(mentionPrefix):len(s)-1]
+		return s[len(mentionPrefix) : len(s)-1]
 	}
 	return s // they sent a userID
 }
@@ -314,7 +321,7 @@ func getWordStore(fileName string) *wordMap.WordMap {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ws, err  := wordMap.NewWordMap(f)
+	ws, err := wordMap.NewWordMap(f)
 	err = f.Close()
 	if err != nil {
 		log.Fatal(err)
