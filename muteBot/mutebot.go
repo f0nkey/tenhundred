@@ -21,11 +21,7 @@ type MuteBot struct {
 	mutedChannelID  string
 	mutedUsers      []string
 	AfterUserUpdate func()
-	// todo: consider having one mutex for the whole struct
-	muMutedUsers      sync.Mutex
-	muAfterUserUpdate sync.Mutex
-	muCommandPrefix   sync.Mutex
-	muMutedChannelID  sync.Mutex
+	mutex	sync.Mutex
 }
 
 // MuteBotConfig is used with NewMuteBot.
@@ -57,8 +53,7 @@ func NewMuteBot(config MuteBotConfig) (mb *MuteBot) {
 		guildID:          config.ServerID,
 		mutedChannelID:   config.MutedChannelID,
 		mutedUsers:       config.MutedUsers,
-		muMutedUsers:     sync.Mutex{},
-		muMutedChannelID: sync.Mutex{},
+		mutex: sync.Mutex{},
 		AfterUserUpdate: func() {
 
 		},
@@ -90,36 +85,16 @@ func (mb *MuteBot) Serve(ctx context.Context) {
 
 // MutedUsers returns a string array of muted user IDs.
 func (mb *MuteBot) MutedUsers() []string {
-	defer mb.muMutedUsers.Unlock()
-	mb.muMutedUsers.Lock()
 	return mb.mutedUsers
 }
 
 // MutedChannelID gets the channel ID where everyone can only use the words in WordsFile.
 func (mb *MuteBot) MutedChannelID() string {
-	defer mb.muMutedChannelID.Unlock()
-	mb.muMutedChannelID.Lock()
 	return mb.mutedChannelID
-}
-
-// SetMutedUsers sets an array of user IDs to users that can only talk with words in the given WordsFile in MuteBotConfig
-func (mb *MuteBot) SetMutedUsers(mutedUsers []string) {
-	defer mb.muMutedUsers.Unlock()
-	mb.muMutedUsers.Lock()
-	mb.mutedUsers = mutedUsers
-}
-
-// SetMutedChannelID sets the channel ID where everyone can only use the words in WordsFile.
-func (mb *MuteBot) SetMutedChannelID(channelID string) {
-	defer mb.muMutedChannelID.Unlock()
-	mb.muMutedChannelID.Lock()
-	mb.mutedChannelID = channelID
 }
 
 // SetAfterUpdateFunc sets the update function ran after the slice of muted users updates.
 func (mb *MuteBot) SetAfterUpdateFunc(update func()) {
-	defer mb.muAfterUserUpdate.Unlock()
-	mb.muAfterUserUpdate.Lock()
 	mb.AfterUserUpdate = update
 }
 
@@ -144,14 +119,13 @@ func inSlice(slice []string, s string) bool {
 
 // todo: combat against message edits
 func (mb *MuteBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) { //todo: consider moving all mutex to HandlerMessageCreate
-
+	defer mb.mutex.Unlock()
+	mb.mutex.Lock()
 	mb.session = sess                                                       // sess is used later in other pointer receiver functions
 	if msgEv.Author.ID == mb.session.State.User.ID || msgEv.GuildID == "" { // is bot's own message || is a PM/DM
 		return
 	}
 
-	defer mb.muCommandPrefix.Unlock()
-	mb.muCommandPrefix.Lock()
 	if msgHasCommandPrefix(msgEv.Content, mb.commandPrefix) && userCanAddBots(sess, msgEv.Author.ID, msgEv.ChannelID) {
 		mb.processCommands(msgEv)
 		return
@@ -169,8 +143,6 @@ func userCanAddBots(sess *discordgo.Session, userID, channelID string) bool {
 
 func (mb *MuteBot) decideMessageRemoval(msgEv *discordgo.MessageCreate) {
 
-	defer mb.muMutedUsers.Unlock()
-	mb.muMutedUsers.Lock()
 	if inSlice(mb.mutedUsers, msgEv.Author.ID) || msgEv.ChannelID == mb.mutedChannelID {
 		badWords := badWords(msgEv, mb.wordStore)
 		if !(len(badWords) > 0) {
@@ -265,9 +237,7 @@ func (mb *MuteBot) unmuteProcedure(targetUser string, msgEv *discordgo.MessageCr
 }
 
 func (mb *MuteBot) RunAfterUserUpdate() {
-	mb.muAfterUserUpdate.Lock()
 	mb.AfterUserUpdate()
-	mb.muAfterUserUpdate.Unlock()
 }
 
 func (mb *MuteBot) muteProcedure(targetUser string, msgEv *discordgo.MessageCreate) {
@@ -289,15 +259,11 @@ func (mb *MuteBot) muteUser(targetUser string) (alreadyMuted bool) {
 	if inSlice(mb.mutedUsers, targetUser) {
 		return true
 	}
-	mb.muMutedUsers.Lock()
 	mb.mutedUsers = append(mb.mutedUsers, targetUser)
-	mb.muMutedUsers.Unlock()
 	return false
 }
 
 func (mb *MuteBot) unmuteUser(s *discordgo.Session, targetUser string) (alreadyUnmuted bool) {
-	defer mb.muMutedUsers.Unlock()
-	mb.muMutedUsers.Lock()
 	userIndex := -1
 	for i, name := range mb.mutedUsers {
 		if targetUser == name {
