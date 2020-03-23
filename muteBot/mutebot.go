@@ -17,11 +17,11 @@ type MuteBot struct {
 	wordStore       *wordMap.WordMap
 	botToken        string
 	commandPrefix   string
-	guildID         string
+	serverID        string
 	mutedChannelID  string
 	mutedUsers      []string
 	AfterUserUpdate func()
-	mutex	sync.Mutex
+	mutex           sync.Mutex
 }
 
 // MuteBotConfig is used with NewMuteBot.
@@ -33,7 +33,7 @@ type MuteBotConfig struct {
 	// BotToken provided by Discord.
 	BotToken string `json:"botToken"`
 	// ServerID this specific bot operates on.
-	ServerID string `json:"guildID"`
+	ServerID string `json:"serverID"`
 	// Muted User IDs that can only talk with the words in WordsFile.
 	MutedUsers []string `json:"mutedUsers"`
 	// Channel where everyone is restricted to words in WordsFile.
@@ -46,14 +46,14 @@ type MuteBotConfig struct {
 func NewMuteBot(config MuteBotConfig) (mb *MuteBot) {
 	ws := getWordStore(config.WordsFile)
 	mb = &MuteBot{
-		session:          nil,
-		wordStore:        ws,
-		botToken:         config.BotToken,
-		commandPrefix:    config.CommandPrefix,
-		guildID:          config.ServerID,
-		mutedChannelID:   config.MutedChannelID,
-		mutedUsers:       config.MutedUsers,
-		mutex: sync.Mutex{},
+		session:        nil,
+		wordStore:      ws,
+		botToken:       config.BotToken,
+		commandPrefix:  config.CommandPrefix,
+		serverID:       config.ServerID,
+		mutedChannelID: config.MutedChannelID,
+		mutedUsers:     config.MutedUsers,
+		mutex:          sync.Mutex{},
 		AfterUserUpdate: func() {
 
 		},
@@ -81,6 +81,11 @@ func (mb *MuteBot) Serve(ctx context.Context) {
 	}
 	fmt.Println("Serving")
 	<-ctx.Done()
+}
+
+// MutedUsers returns the serverID associated with this bot.
+func (mb *MuteBot) ServerID() string {
+	return mb.serverID
 }
 
 // MutedUsers returns a string array of muted user IDs.
@@ -122,7 +127,7 @@ func (mb *MuteBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *discordg
 	defer mb.mutex.Unlock()
 	mb.mutex.Lock()
 	mb.session = sess                                                       // sess is used later in other pointer receiver functions
-	if msgEv.Author.ID == mb.session.State.User.ID || msgEv.GuildID == "" { // is bot's own message || is a PM/DM
+	if msgEv.Author.ID == mb.session.State.User.ID || msgEv.GuildID == "" || msgEv.GuildID != mb.serverID{ // is bot's own message || is a PM/DM || is not of this guild
 		return
 	}
 
