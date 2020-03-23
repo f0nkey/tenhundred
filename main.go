@@ -16,7 +16,6 @@ type JSONConfig struct {
 	BotToken       string   `json:"botToken"`
 	ServerID       string   `json:"serverID"`
 	MutedChannelID string   `json:"mutedChannelID"`
-	Admins         []string `json:"admins"`
 	MutedUsers     []string `json:"mutedUsers"`
 }
 
@@ -37,7 +36,7 @@ func main() {
 
 	mb := muteBot.NewMuteBot(mbconf)
 	updateJSONfile := func() {
-		updateJSONConfigFile(mbconf, mb.Admins(), mb.MutedUsers(), mb.MutedChannelID())
+		updateJSONConfigFile(mbconf, mb.MutedUsers(), mb.MutedChannelID())
 	}
 	mb.SetAfterUpdateFunc(updateJSONfile)
 	mb.Serve(context.Background())
@@ -45,13 +44,12 @@ func main() {
 
 func createDefaultConfigFile() {
 	def := JSONConfig{
-		WordsFile:     "wordList.txt", // wordList.txt taken from https://xkcd.com/simplewriter/words.js, removed "fuck" and "shit"
-		CommandPrefix: "!th",
-		BotToken:      "",
-		ServerID:      "",
-		MutedChannelID:"",
-		Admins:        []string{},
-		MutedUsers:    []string{},
+		WordsFile:      "wordList.txt", // wordList.txt taken from https://xkcd.com/simplewriter/words.js, removed "fuck" and "shit"
+		CommandPrefix:  "!th",
+		BotToken:       "",
+		ServerID:       "", //todo: fix putting in serverID in the config file
+		MutedChannelID: "",
+		MutedUsers:     []string{},
 	}
 
 	jsBytes, err := json.MarshalIndent(def, "", "    ")
@@ -62,15 +60,14 @@ func createDefaultConfigFile() {
 	ioutil.WriteFile("config.json", jsBytes, 0644)
 }
 
-func updateJSONConfigFile(mbconf muteBot.MuteBotConfig, admins, mutedUsers []string, mutedChannelID string) {
+func updateJSONConfigFile(mbconf muteBot.MuteBotConfig, mutedUsers []string, mutedChannelID string) {
 	jsConf := JSONConfig{
-		WordsFile:     mbconf.WordsFile,
-		CommandPrefix: mbconf.CommandPrefix,
-		BotToken:      mbconf.BotToken,
-		ServerID:      mbconf.ServerID, //todo fix putting updated serverID in
-		MutedChannelID:mutedChannelID,
-		Admins:        admins,
-		MutedUsers:    mutedUsers,
+		WordsFile:      mbconf.WordsFile,
+		CommandPrefix:  mbconf.CommandPrefix,
+		BotToken:       mbconf.BotToken,
+		ServerID:       mbconf.ServerID,
+		MutedChannelID: mutedChannelID,
+		MutedUsers:     mutedUsers,
 	}
 
 	jsonBytes, err := json.MarshalIndent(jsConf, "", "    ")

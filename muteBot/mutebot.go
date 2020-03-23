@@ -19,11 +19,9 @@ type MuteBot struct {
 	commandPrefix   string
 	guildID         string
 	mutedChannelID  string
-	admins          []string
 	mutedUsers      []string
 	AfterUserUpdate func()
-
-	muAdmins          sync.Mutex // todo: consider having one mutex for the whole struct
+	// todo: consider having one mutex for the whole struct
 	muMutedUsers      sync.Mutex
 	muAfterUserUpdate sync.Mutex
 	muCommandPrefix   sync.Mutex
@@ -40,8 +38,6 @@ type MuteBotConfig struct {
 	BotToken string `json:"botToken"`
 	// ServerID this specific bot operates on.
 	ServerID string `json:"guildID"`
-	// Admin IDs that can mute players.
-	Admins []string `json:"admins"`
 	// Muted User IDs that can only talk with the words in WordsFile.
 	MutedUsers []string `json:"mutedUsers"`
 	// Channel where everyone is restricted to words in WordsFile.
@@ -60,9 +56,7 @@ func NewMuteBot(config MuteBotConfig) (mb *MuteBot) {
 		commandPrefix:    config.CommandPrefix,
 		guildID:          config.ServerID,
 		mutedChannelID:   config.MutedChannelID,
-		admins:           config.Admins,
 		mutedUsers:       config.MutedUsers,
-		muAdmins:         sync.Mutex{},
 		muMutedUsers:     sync.Mutex{},
 		muMutedChannelID: sync.Mutex{},
 		AfterUserUpdate: func() {
@@ -94,13 +88,6 @@ func (mb *MuteBot) Serve(ctx context.Context) {
 	<-ctx.Done()
 }
 
-// Admins returns a string array of admin IDs.
-func (mb *MuteBot) Admins() []string {
-	defer mb.muAdmins.Unlock()
-	mb.muAdmins.Lock()
-	return mb.admins
-}
-
 // MutedUsers returns a string array of muted user IDs.
 func (mb *MuteBot) MutedUsers() []string {
 	defer mb.muMutedUsers.Unlock()
@@ -113,13 +100,6 @@ func (mb *MuteBot) MutedChannelID() string {
 	defer mb.muMutedChannelID.Unlock()
 	mb.muMutedChannelID.Lock()
 	return mb.mutedChannelID
-}
-
-// SetAdmins sets an array of user IDs to admins that can issue mute commands.
-func (mb *MuteBot) SetAdmins(admins []string) {
-	defer mb.muAdmins.Unlock()
-	mb.muAdmins.Lock()
-	mb.admins = admins
 }
 
 // SetMutedUsers sets an array of user IDs to users that can only talk with words in the given WordsFile in MuteBotConfig
@@ -165,18 +145,26 @@ func inSlice(slice []string, s string) bool {
 // todo: combat against message edits
 func (mb *MuteBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) { //todo: consider moving all mutex to HandlerMessageCreate
 
-	mb.session = sess // sess is used later in other pointer receiver functions
+	mb.session = sess                                                       // sess is used later in other pointer receiver functions
 	if msgEv.Author.ID == mb.session.State.User.ID || msgEv.GuildID == "" { // is bot's own message || is a PM/DM
 		return
 	}
 
 	defer mb.muCommandPrefix.Unlock()
 	mb.muCommandPrefix.Lock()
-	if msgHasCommandPrefix(msgEv.Content, mb.commandPrefix) {
+	if msgHasCommandPrefix(msgEv.Content, mb.commandPrefix) && userCanAddBots(sess, msgEv.Author.ID, msgEv.ChannelID) {
 		mb.processCommands(msgEv)
 		return
 	}
 	mb.decideMessageRemoval(msgEv)
+}
+
+func userCanAddBots(sess *discordgo.Session, userID, channelID string) bool {
+	aperms, err := sess.UserChannelPermissions(userID, channelID)
+	if err != nil {
+		log.Println("userCanAddBots", err)
+	}
+	return aperms&discordgo.PermissionManageServer != 0
 }
 
 func (mb *MuteBot) decideMessageRemoval(msgEv *discordgo.MessageCreate) {
@@ -202,10 +190,8 @@ func (mb *MuteBot) decideMessageRemoval(msgEv *discordgo.MessageCreate) {
 			}
 		}
 		notice += "\nPlease try again."
-		defer mb.muAdmins.Unlock()
-		mb.muAdmins.Lock()
-		if inSlice(mb.admins, msgEv.Author.ID) && !(msgEv.ChannelID == mb.mutedChannelID) {
-			notice += "\nPaste `" + mb.commandPrefix + " unmute " + msgEv.Author.ID + "` in the server to unmute yourself. [This line is displayed to admins only]"
+		if userCanAddBots(mb.session, msgEv.Author.ID, msgEv.ChannelID) && !(msgEv.ChannelID == mb.mutedChannelID) {
+			notice += "\nPaste `" + mb.commandPrefix + " unmute " + msgEv.Author.ID + "` in the server to unmute yourself. [This line is displayed to users who can add bots only]"
 		}
 
 		sendPrivateMessage(mb.session, msgEv.Author.ID, notice)
@@ -215,10 +201,6 @@ func (mb *MuteBot) decideMessageRemoval(msgEv *discordgo.MessageCreate) {
 // todo: allow punctuation, strip punctuation when testing
 // todo: check if player target is actually a playerID
 func (mb *MuteBot) processCommands(msgEv *discordgo.MessageCreate) {
-	if !inSlice(mb.admins, msgEv.Author.ID) {
-		return
-	}
-
 	msg := strings.Split(msgEv.Content, " ")
 	if !(len(msg) >= 2) {
 		return
@@ -335,7 +317,7 @@ func msgHasCommandPrefix(msg, cmdPrefix string) bool {
 
 func sendPrivateMessage(s *discordgo.Session, userID, msg string) {
 	chann, err := s.UserChannelCreate(userID) // uses existing channel if its already created
-	if err != nil && strings.Contains(err.Error(),"Cannot send messages to this user") {
+	if err != nil && strings.Contains(err.Error(), "Cannot send messages to this user") {
 		return
 	}
 	if err != nil {
