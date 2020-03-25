@@ -98,6 +98,11 @@ func (mb *MuteBot) MutedChannelID() string {
 	return mb.mutedChannelID
 }
 
+// CommandPrefix gets the command prefix this bot responds to.
+func (mb *MuteBot) CommandPrefix() string {
+	return mb.commandPrefix
+}
+
 // SetAfterUpdateFunc sets the update function ran after the slice of muted users updates.
 func (mb *MuteBot) SetAfterUpdateFunc(update func()) {
 	mb.AfterUserUpdate = update

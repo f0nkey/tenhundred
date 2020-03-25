@@ -36,7 +36,7 @@ func main() {
 
 	mb := mutebot.NewMuteBot(mbconf)
 	updateJSONfile := func() {
-		updateJSONConfigFile(mbconf, mb.MutedUsers(), mb.MutedChannelID(), mb.ServerID())
+		updateJSONConfigFile(mbconf, mb.MutedUsers(), mb.MutedChannelID(), mb.ServerID(), mb.CommandPrefix())
 	}
 	mb.SetAfterUpdateFunc(updateJSONfile)
 	mb.Serve(context.Background())
@@ -60,10 +60,10 @@ func createDefaultConfigFile() {
 	ioutil.WriteFile("config.json", jsBytes, 0644)
 }
 
-func updateJSONConfigFile(mbconf mutebot.MuteBotConfig, mutedUsers []string, mutedChannelID, serverID string) {
+func updateJSONConfigFile(mbconf mutebot.MuteBotConfig, mutedUsers []string, mutedChannelID, serverID, commandPrefix string) {
 	jsConf := JSONConfig{
 		WordsFile:      mbconf.WordsFile,
-		CommandPrefix:  mbconf.CommandPrefix,
+		CommandPrefix:  commandPrefix,
 		BotToken:       mbconf.BotToken,
 		ServerID:       serverID,
 		MutedChannelID: mutedChannelID,
