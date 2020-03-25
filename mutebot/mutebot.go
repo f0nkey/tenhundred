@@ -160,9 +160,9 @@ func (mb *MuteBot) decideMessageRemoval(msgEv *discordgo.MessageCreate) {
 		}
 		mb.session.ChannelMessageDelete(msgEv.ChannelID, msgEv.ID)
 
-		notice := "You can only talk with the ten hundred most used words now. https://xkcd.com/simplewriter/\nThese words are not simple: "
+		notice := "You can only talk with the ten hundred most used words now. \nhttps://github.com/f0nkey/tenhundred\nThese words are not simple: "
 		if msgEv.ChannelID == mb.mutedChannelID {
-			notice = "You can only talk with the ten hundred most used words in this channel. https://xkcd.com/simplewriter/\nThese words are not simple: "
+			notice = "You can only talk with the ten hundred most used words in this channel. \nhttps://github.com/f0nkey/tenhundred\nThese words are not simple: "
 		}
 
 		for i, badWord := range badWords {
@@ -311,14 +311,15 @@ func sendPrivateMessage(s *discordgo.Session, userID, msg string) {
 }
 
 func sendPMHelp(session *discordgo.Session, userID string, cmdPrefix string) {
-	line0 := fmt.Sprintln("Commands:")
+	line0 := fmt.Sprintln("Visit https://github.com/f0nkey/tenhundred for more help.")
+	line1 := fmt.Sprintln("Commands:")
 	cmd1 := fmt.Sprintf("**%v set (yourNewPrefix)** - Only allows the 1000 most common words in the channel this is ran in.\n", cmdPrefix)
 	cmd2 := fmt.Sprintf("**%v rem (yourNewPrefix)** - Removes the restriction to the currently set channel.\n", cmdPrefix)
 	cmd3 := fmt.Sprintf("**%v unmute (@User)** - Unmutes a user\n", cmdPrefix)
 	cmd4 := fmt.Sprintf("**%v mute (@User)** - Restricts a user to using only the 1000 most common words.\n", cmdPrefix)
 	cmd5 := fmt.Sprintf("**%v prefix (yourNewPrefix)** - Changes the prefix this bot responds to. Currently set to **%v **\n", cmdPrefix, cmdPrefix)
 
-	sendPrivateMessage(session, userID, line0+cmd1+cmd2+cmd3+cmd4+cmd5)
+	sendPrivateMessage(session, userID, line0+line1+cmd1+cmd2+cmd3+cmd4+cmd5)
 }
 
 func parseUserID(s string) string {
