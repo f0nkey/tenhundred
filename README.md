@@ -18,6 +18,8 @@ A [Discord](https://discordapp.com/) bot inspired by [xkcd's Simple Writer](http
 
 `!th prefix (newPrefix)` Changes the prefix this bot responds to.
 
+> User IDs are interchangeable with mentions. `!th mute 197768883409649664` is valid.
+
 # Host Your Own
 1. `go build *.go` and run the built binary to generate config.json.
 2. [Create a bot](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token) and add its Bot Token to config.json. Invite it to your server.

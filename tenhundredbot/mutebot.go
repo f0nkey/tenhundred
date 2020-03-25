@@ -394,4 +394,3 @@ func getWordStore(fileName string) *wordMap.WordMap {
 
 // todo: combat against message edits
 // todo: allow punctuation and dashes
-// todo: add the you can mute using a userID
