@@ -33,6 +33,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if mbconf.BotToken == "" {
+		log.Fatal("No Bot Token in config.json. See the GitHub README.md for information on how to get a Bot Token.")
+	}
 
 	mb := mutebot.NewMuteBot(mbconf)
 	updateJSONfile := func() {
