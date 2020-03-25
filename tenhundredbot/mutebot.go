@@ -277,6 +277,7 @@ func (th *TenHundredBot) unmuteProcedure(targetUser string, msgEv *discordgo.Mes
 	alreadyUnmuted := th.unmuteUser(th.session, targetUser)
 	if alreadyUnmuted {
 		sendPrivateMessage(th.session, msgEv.Author.ID, "That user is not muted.")
+		th.session.ChannelMessageDelete(msgEv.ChannelID, msgEv.ID)
 		return
 	}
 	th.session.ChannelMessageSend(msgEv.ChannelID, "<@"+targetUser+"> can talk with any words now.")
@@ -317,6 +318,7 @@ func (th *TenHundredBot) muteProcedure(targetUser string, msgEv *discordgo.Messa
 	alreadyMuted := th.muteUser(targetUser)
 	if alreadyMuted {
 		sendPrivateMessage(th.session, msgEv.Author.ID, "That user is already muted.")
+		th.session.ChannelMessageDelete(msgEv.ChannelID, msgEv.ID)
 		return
 	}
 
@@ -411,4 +413,3 @@ func getWordStore(fileName string) *wordMap.WordMap {
 }
 
 // todo: allow punctuation and dashes
-// todo: delete if user is already muted or unmuted
