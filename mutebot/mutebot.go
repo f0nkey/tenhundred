@@ -220,7 +220,7 @@ func (mb *MuteBot) processCommands(msgEv *discordgo.MessageCreate) {
 
 		if cmd == "prefix" {
 			mb.commandPrefix = thirdArgument
-			sendPrivateMessage(mb.session, msgEv.Author.ID, "This mb will now respond to **"+mb.commandPrefix+"**")
+			sendPrivateMessage(mb.session, msgEv.Author.ID, "This Bot will now respond to **"+mb.commandPrefix+"**")
 			return
 		}
 
