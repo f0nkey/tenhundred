@@ -17,7 +17,7 @@ type JSONConfig struct {
 	ServerID       string   `json:"serverID"`
 	MutedChannelID string   `json:"mutedChannelID"`
 	MutedUsers     []string `json:"mutedUsers"`
-	MaxMutedUsers int `json:"maxMutedUsers"`
+	MaxMutedUsers  int      `json:"maxMutedUsers"`
 }
 
 func main() {
@@ -53,7 +53,7 @@ func createDefaultConfigFile() {
 		BotToken:       "",
 		ServerID:       "",
 		MutedChannelID: "",
-		MaxMutedUsers: 30,
+		MaxMutedUsers:  30,
 		MutedUsers:     []string{},
 	}
 
@@ -73,7 +73,7 @@ func updateJSONConfigFile(mbconf tenhundredbot.TenHundredBotConfig, mutedUsers [
 		ServerID:       serverID,
 		MutedChannelID: mutedChannelID,
 		MutedUsers:     mutedUsers,
-		MaxMutedUsers: maxMutedUsers,
+		MaxMutedUsers:  maxMutedUsers,
 	}
 
 	jsonBytes, err := json.MarshalIndent(jsConf, "", "    ")

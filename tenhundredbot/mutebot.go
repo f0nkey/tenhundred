@@ -20,7 +20,7 @@ type TenHundredBot struct {
 	serverID        string
 	mutedChannelID  string
 	mutedUsers      []string
-	maxMutedUsers		int
+	maxMutedUsers   int
 	AfterUserUpdate func()
 	mutex           sync.Mutex
 }
@@ -38,7 +38,7 @@ type TenHundredBotConfig struct {
 	// Muted User IDs that can only talk with the words in WordsFile.
 	MutedUsers []string `json:"mutedUsers"`
 	// Max users that can be muted at the same time.
-	MaxMutedUsers		int `json:"maxMutedUsers"`
+	MaxMutedUsers int `json:"maxMutedUsers"`
 	// Channel where everyone is restricted to words in WordsFile.
 	MutedChannelID string `json:"mutedChannelID"`
 	// Called after every change to MutedUsers.
@@ -59,7 +59,7 @@ func NewTenHundredBot(config TenHundredBotConfig) (th *TenHundredBot) {
 		serverID:       config.ServerID,
 		mutedChannelID: config.MutedChannelID,
 		mutedUsers:     config.MutedUsers,
-		maxMutedUsers: config.MaxMutedUsers,
+		maxMutedUsers:  config.MaxMutedUsers,
 		mutex:          sync.Mutex{},
 		AfterUserUpdate: func() {
 
@@ -147,8 +147,8 @@ func inSlice(slice []string, s string) bool {
 func (th *TenHundredBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) {
 	defer th.mutex.Unlock()
 	th.mutex.Lock()
-	th.session = sess                                                                                      // sess is used later in other pointer receiver functions
-	if msgEv.Author.ID == th.session.State.User.ID || msgEv.GuildID == "" || msgEv.GuildID != th.serverID{ // is bot's own message || is a PM/DM || is not of this guild
+	th.session = sess                                                                                       // sess is used later in other pointer receiver functions
+	if msgEv.Author.ID == th.session.State.User.ID || msgEv.GuildID == "" || msgEv.GuildID != th.serverID { // is bot's own message || is a PM/DM || is not of this guild
 		return
 	}
 
@@ -166,7 +166,7 @@ func (th *TenHundredBot) HandlerMessageEdit(sess *discordgo.Session, msgUpdate *
 	th.session = sess // sess is used later in other pointer receiver functions
 	msgCreate := &discordgo.MessageCreate{msgUpdate.Message}
 
-	if msgCreate.Author.ID == th.session.State.User.ID || msgCreate.GuildID == "" || msgCreate.GuildID != th.serverID{ // is bot's own message || is a PM/DM || is not of this guild
+	if msgCreate.Author.ID == th.session.State.User.ID || msgCreate.GuildID == "" || msgCreate.GuildID != th.serverID { // is bot's own message || is a PM/DM || is not of this guild
 		return
 	}
 
@@ -209,8 +209,6 @@ func (th *TenHundredBot) decideMessageRemoval(msgEv *discordgo.MessageCreate) {
 	}
 }
 
-// todo: allow punctuation, strip punctuation when testing
-// todo: check if player target is actually a playerID
 func (th *TenHundredBot) processCommands(msgEv *discordgo.MessageCreate) {
 	msg := strings.Split(msgEv.Content, " ")
 	if !(len(msg) >= 2) {
@@ -245,7 +243,7 @@ func (th *TenHundredBot) processCommands(msgEv *discordgo.MessageCreate) {
 	}
 
 	if len(msg) >= 3 {
-		thirdArgument := parseUserID(msg[2]) // userID for mute, unmute todo: check if user exists on server
+		thirdArgument := parseUserID(msg[2])
 
 		if cmd == "prefix" {
 			th.commandPrefix = thirdArgument
@@ -299,14 +297,14 @@ func (th *TenHundredBot) muteProcedure(targetUser string, msgEv *discordgo.Messa
 		return
 	}
 
-	if len(th.mutedUsers)  >= th.maxMutedUsers {
+	if len(th.mutedUsers) >= th.maxMutedUsers {
 		msg := fmt.Sprintf("You've reached the max mutable users [%v/%v]\nConsider unmuting these older users (ordered old to new):\n", len(th.mutedUsers), th.maxMutedUsers)
 		currentBytes := len(msg)
 		for i := 0; i < len(th.mutedUsers); i++ {
 			user := th.mutedUsers[i]
 			line := fmt.Sprintf("**%v unmute %v**\n", th.commandPrefix, user)
-			if currentBytes + len(line) > 2000 { // 2000 is the max message length for Discord
-				break;
+			if currentBytes+len(line) > 2000 { // 2000 is the max message length for Discord
+				break
 			}
 			currentBytes += len(line)
 			msg += line
@@ -349,10 +347,10 @@ func (th *TenHundredBot) unmuteUser(s *discordgo.Session, targetUser string) (al
 }
 
 func hasPrefix(th *TenHundredBot, msg string) bool {
-	botMention := "<@!"+th.session.State.User.ID+">"
-	prefixIsMention :=  len(msg) > len(botMention) && msg[0:len(botMention)] == botMention
+	botMention := "<@!" + th.session.State.User.ID + ">"
+	prefixIsMention := len(msg) > len(botMention) && msg[0:len(botMention)] == botMention
 
-	prefixIsCmdPrefix := len(msg) > len(th.commandPrefix + " ") && msg[0:len(th.commandPrefix)+1]  == th.commandPrefix + " " //adding a space; if !t, then it would detect !th
+	prefixIsCmdPrefix := len(msg) > len(th.commandPrefix+" ") && msg[0:len(th.commandPrefix)+1] == th.commandPrefix+" " //adding a space; if !t, then it would detect !th
 	return prefixIsCmdPrefix || prefixIsMention
 }
 
