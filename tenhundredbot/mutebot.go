@@ -20,6 +20,7 @@ type TenHundredBot struct {
 	serverID        string
 	mutedChannelID  string
 	mutedUsers      []string
+	maxMutedUsers		int
 	AfterUserUpdate func()
 	mutex           sync.Mutex
 }
@@ -36,6 +37,8 @@ type TenHundredBotConfig struct {
 	ServerID string `json:"serverID"`
 	// Muted User IDs that can only talk with the words in WordsFile.
 	MutedUsers []string `json:"mutedUsers"`
+	// Max users that can be muted at the same time.
+	MaxMutedUsers		int `json:"maxMutedUsers"`
 	// Channel where everyone is restricted to words in WordsFile.
 	MutedChannelID string `json:"mutedChannelID"`
 	// Called after every change to MutedUsers.
@@ -44,6 +47,9 @@ type TenHundredBotConfig struct {
 
 // NewTenHundredBot returns a TenHundredBot.
 func NewTenHundredBot(config TenHundredBotConfig) (th *TenHundredBot) {
+	if config.MaxMutedUsers == 0 {
+		config.MaxMutedUsers = 30
+	}
 	ws := getWordStore(config.WordsFile)
 	th = &TenHundredBot{
 		session:        nil,
@@ -53,6 +59,7 @@ func NewTenHundredBot(config TenHundredBotConfig) (th *TenHundredBot) {
 		serverID:       config.ServerID,
 		mutedChannelID: config.MutedChannelID,
 		mutedUsers:     config.MutedUsers,
+		maxMutedUsers: config.MaxMutedUsers,
 		mutex:          sync.Mutex{},
 		AfterUserUpdate: func() {
 
@@ -103,6 +110,11 @@ func (th *TenHundredBot) CommandPrefix() string {
 	return th.commandPrefix
 }
 
+// MaxMutedUsers returns the maximum muted users allowed.
+func (th *TenHundredBot) MaxMutedUsers() int {
+	return th.maxMutedUsers
+}
+
 // SetAfterUpdateFunc sets the update function ran after the slice of muted users updates.
 func (th *TenHundredBot) SetAfterUpdateFunc(update func()) {
 	th.AfterUserUpdate = update
@@ -127,8 +139,7 @@ func inSlice(slice []string, s string) bool {
 	return false
 }
 
-// todo: combat against message edits
-func (th *TenHundredBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) { //todo: consider moving all mutex to HandlerMessageCreate
+func (th *TenHundredBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) {
 	defer th.mutex.Unlock()
 	th.mutex.Lock()
 	th.session = sess                                                                                      // sess is used later in other pointer receiver functions
@@ -269,11 +280,28 @@ func (th *TenHundredBot) muteProcedure(targetUser string, msgEv *discordgo.Messa
 		return
 	}
 
+	if len(th.mutedUsers)  >= th.maxMutedUsers {
+		msg := fmt.Sprintf("You've reached the max mutable users [%v/%v]\nConsider unmuting these older users (ordered old to new):\n", len(th.mutedUsers), th.maxMutedUsers)
+		currentBytes := len(msg)
+		for i := 0; i < len(th.mutedUsers); i++ {
+			user := th.mutedUsers[i]
+			line := fmt.Sprintf("**%v unmute %v**\n", th.commandPrefix, user)
+			if currentBytes + len(line) > 2000 { // 2000 is the max message length for Discord
+				break;
+			}
+			currentBytes += len(line)
+			msg += line
+		}
+		sendPrivateMessage(th.session, msgEv.Author.ID, msg)
+		return
+	}
+
 	alreadyMuted := th.muteUser(targetUser)
 	if alreadyMuted {
 		sendPrivateMessage(th.session, msgEv.Author.ID, "That user is already muted.")
 		return
 	}
+
 	th.session.ChannelMessageSend(msgEv.ChannelID, "<@"+targetUser+"> can only talk with the ten hundred most used words now (simple words).")
 	return
 }
@@ -364,6 +392,6 @@ func getWordStore(fileName string) *wordMap.WordMap {
 	return ws
 }
 
-// todo: add a max limit to mutedUsers and others
-// todo: do not tell user their prefix command is of the not allowed words
-// todo: don't let people mute the bot itself
+// todo: combat against message edits
+// todo: allow punctuation and dashes
+// todo: add the you can mute using a userID

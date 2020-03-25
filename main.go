@@ -17,6 +17,7 @@ type JSONConfig struct {
 	ServerID       string   `json:"serverID"`
 	MutedChannelID string   `json:"mutedChannelID"`
 	MutedUsers     []string `json:"mutedUsers"`
+	MaxMutedUsers int `json:"maxMutedUsers"`
 }
 
 func main() {
@@ -39,7 +40,7 @@ func main() {
 
 	mb := tenhundredbot.NewTenHundredBot(mbconf)
 	updateJSONfile := func() {
-		updateJSONConfigFile(mbconf, mb.MutedUsers(), mb.MutedChannelID(), mb.ServerID(), mb.CommandPrefix())
+		updateJSONConfigFile(mbconf, mb.MutedUsers(), mb.MutedChannelID(), mb.ServerID(), mb.CommandPrefix(), mb.MaxMutedUsers())
 	}
 	mb.SetAfterUpdateFunc(updateJSONfile)
 	mb.Serve(context.Background())
@@ -50,8 +51,9 @@ func createDefaultConfigFile() {
 		WordsFile:      "wordList.txt", // wordList.txt taken from https://xkcd.com/simplewriter/words.js, removed "fuck" and "shit"
 		CommandPrefix:  "!th",
 		BotToken:       "",
-		ServerID:       "", //todo: fix putting in serverID in the config file
+		ServerID:       "",
 		MutedChannelID: "",
+		MaxMutedUsers: 30,
 		MutedUsers:     []string{},
 	}
 
@@ -63,7 +65,7 @@ func createDefaultConfigFile() {
 	ioutil.WriteFile("config.json", jsBytes, 0644)
 }
 
-func updateJSONConfigFile(mbconf tenhundredbot.TenHundredBotConfig, mutedUsers []string, mutedChannelID, serverID, commandPrefix string) {
+func updateJSONConfigFile(mbconf tenhundredbot.TenHundredBotConfig, mutedUsers []string, mutedChannelID, serverID, commandPrefix string, maxMutedUsers int) {
 	jsConf := JSONConfig{
 		WordsFile:      mbconf.WordsFile,
 		CommandPrefix:  commandPrefix,
@@ -71,6 +73,7 @@ func updateJSONConfigFile(mbconf tenhundredbot.TenHundredBotConfig, mutedUsers [
 		ServerID:       serverID,
 		MutedChannelID: mutedChannelID,
 		MutedUsers:     mutedUsers,
+		MaxMutedUsers: maxMutedUsers,
 	}
 
 	jsonBytes, err := json.MarshalIndent(jsConf, "", "    ")
