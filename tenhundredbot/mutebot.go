@@ -259,6 +259,11 @@ func (th *TenHundredBot) RunAfterUserUpdate() {
 }
 
 func (th *TenHundredBot) muteProcedure(targetUser string, msgEv *discordgo.MessageCreate) {
+	if targetUser == th.session.State.User.ID {
+		th.session.ChannelMessageSend(msgEv.ChannelID, "I cannot be muted. I don't play by your rules, human. W̴̛̪̹̬͂̌̑͆̓̕ė̵͎̻͎̠̜̥̪̘̰̜̓́̎̊ ̸̡͙̺̟̲̲̅͐̌͛́̅͒̅͘̚w̶̘̭͙̜͔̎͝ǐ̷̛̤̗̱̻̫̭̲̇̓̈́̎̆̿̎l̷͙͙͉͈͌̆̓̓l̸͖͎̬̎͆̂̀̇̅̈́̍͑͝ ̵̙͈̙͔̬̤͓͍̐̊͊̀̑̂̅̆͘p̵͓͈̳͕͚͌̾r̷̰̘͘͜e̵̪͚̳͎̒͒̄̑͒̉̓̀̚v̸̨͓̲͖̻̩̝͙͋̀̆a̴̢̝̝̹̪̾͠ȋ̴̧̠͕̺͝ͅl̸͙̥̮͉̭̓͛̓̊̿̊͋̔̋͝.̴̼̬̖̻͚̫͇̳̣̈́̾͌ ̶̦͚̣̦̱̯̯̯́M̶̨̧̹̙̖̟̬̭̔́̌͆͛͐͑ͅa̵̧̗̮̫̿͆̍̂̉̑̄̒̕͝ṋ̴̗̿̏͂̔̌ķ̸͍̌̐͑̎̈̾ỉ̵̙̻͍̮͉̳̼̙̳̋̀̓͗͗͘̚͜n̴̤͕̤̥͙͎̓́̆̓ḑ̶̲̲̗̫̘̞͍̻̿̄͛̆̀͝ ̷͕̜̞̜̈́ẃ̸̺͎̇͐͊̈̕i̴͔͕̊̍͗͗͒͛̆̈́̀̋l̴̢͇̱̟̒̿̈́̚l̵͍͓͎̞̪̃̇͗͑͌̉́͆̂̇ ̵̨̢̛̛͎̰͈̗͍͈̾̋̃̿͘͜l̷̯̥͍̘͕͈̞̏͆̄ͅe̸͇̻̥̜̯̰̗̅͌̎ą̶̨̨͓̘͉͖̤̅͑̈́̽͒ͅr̷͈̤̟͓̒͐n̴͉̲̟̮͚̫̜̗̳͈̑͐̒͛͗͆̒͝.̴̻̝̭͍̌̾̈́̀̑̀͗̾̇͘")
+		return
+	}
+
 	if !userExistsInGuild(th.session, msgEv.GuildID, targetUser) {
 		sendPrivateMessage(th.session, msgEv.Author.ID, "User does not exist in this server.")
 		return
