@@ -136,7 +136,7 @@ func (th *TenHundredBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *di
 		return
 	}
 
-	if msgHasCommandPrefix(msgEv.Content, th.commandPrefix) && userCanAddBots(sess, msgEv.Author.ID, msgEv.ChannelID) {
+	if hasPrefix(th, msgEv.Content) && userCanAddBots(sess, msgEv.Author.ID, msgEv.ChannelID) {
 		th.processCommands(msgEv)
 		return
 	}
@@ -294,8 +294,12 @@ func (th *TenHundredBot) unmuteUser(s *discordgo.Session, targetUser string) (al
 	return false
 }
 
-func msgHasCommandPrefix(msg, cmdPrefix string) bool {
-	return len(msg) > len(cmdPrefix) && msg[0:len(cmdPrefix)] == cmdPrefix
+func hasPrefix(th *TenHundredBot, msg string) bool {
+	botMention := "<@!"+th.session.State.User.ID+">"
+	prefixIsMention :=  len(msg) > len(botMention) && msg[0:len(botMention)] == botMention
+
+	prefixIsCmdPrefix := len(msg) > len(th.commandPrefix + " ") && msg[0:len(th.commandPrefix)+1]  == th.commandPrefix + " " //adding a space; if !t, then it would detect !th
+	return prefixIsCmdPrefix || prefixIsMention
 }
 
 func sendPrivateMessage(s *discordgo.Session, userID, msg string) {
@@ -312,7 +316,7 @@ func sendPrivateMessage(s *discordgo.Session, userID, msg string) {
 
 func sendPMHelp(session *discordgo.Session, userID string, cmdPrefix string) {
 	line0 := fmt.Sprintln("Visit https://github.com/f0nkey/tenhundred for more help.")
-	line1 := fmt.Sprintln("Commands:")
+	line1 := fmt.Sprintf("Commands (**%v** can be replaced with @TenHundredBot):\n", cmdPrefix)
 	cmd1 := fmt.Sprintf("**%v set (yourNewPrefix)** - Only allows the 1000 most common words in the channel this is ran in.\n", cmdPrefix)
 	cmd2 := fmt.Sprintf("**%v rem (yourNewPrefix)** - Removes the restriction to the currently set channel.\n", cmdPrefix)
 	cmd3 := fmt.Sprintf("**%v unmute (@User)** - Unmutes a user\n", cmdPrefix)
@@ -356,3 +360,6 @@ func getWordStore(fileName string) *wordMap.WordMap {
 
 // todo: add a max limit to mutedUsers and others
 // todo: add a way to mention the bot for commands
+// todo: do not tell user their prefix command is of the not allowed words
+// todo: delete if invalid command
+// todo: don't let people mute the bot itself
