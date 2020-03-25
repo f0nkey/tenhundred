@@ -235,6 +235,7 @@ func (th *TenHundredBot) processCommands(msgEv *discordgo.MessageCreate) {
 		}
 	}
 	sendPrivateMessage(th.session, msgEv.Author.ID, "Invalid command. Try "+th.commandPrefix+" mute @USER")
+	th.session.ChannelMessageDelete(msgEv.ChannelID, msgEv.ID)
 	return
 }
 
@@ -316,7 +317,7 @@ func sendPrivateMessage(s *discordgo.Session, userID, msg string) {
 
 func sendPMHelp(session *discordgo.Session, userID string, cmdPrefix string) {
 	line0 := fmt.Sprintln("Visit https://github.com/f0nkey/tenhundred for more help.")
-	line1 := fmt.Sprintf("Commands (**%v** can be replaced with @TenHundredBot):\n", cmdPrefix)
+	line1 := fmt.Sprintf("Commands (**%v** can be replaced with **@TenHundredBot**):\n", cmdPrefix)
 	cmd1 := fmt.Sprintf("**%v set (yourNewPrefix)** - Only allows the 1000 most common words in the channel this is ran in.\n", cmdPrefix)
 	cmd2 := fmt.Sprintf("**%v rem (yourNewPrefix)** - Removes the restriction to the currently set channel.\n", cmdPrefix)
 	cmd3 := fmt.Sprintf("**%v unmute (@User)** - Unmutes a user\n", cmdPrefix)
@@ -359,7 +360,5 @@ func getWordStore(fileName string) *wordMap.WordMap {
 }
 
 // todo: add a max limit to mutedUsers and others
-// todo: add a way to mention the bot for commands
 // todo: do not tell user their prefix command is of the not allowed words
-// todo: delete if invalid command
 // todo: don't let people mute the bot itself
