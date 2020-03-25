@@ -191,13 +191,20 @@ func (mb *MuteBot) processCommands(msgEv *discordgo.MessageCreate) {
 
 	defer mb.RunAfterUserUpdate() // the rest of the commands will update some value that needs to be written
 	if cmd == "set" {
-		fmt.Println("msgg", msg)
+		if mb.mutedChannelID == msgEv.ChannelID {
+			mb.session.ChannelMessageSend(msgEv.ChannelID, "This area is already only allows simple words.")
+			return
+		}
 		mb.mutedChannelID = msgEv.ChannelID
 		mb.session.ChannelMessageSend(msgEv.ChannelID, "All people are only allowed to talk with simple words in this area now.")
 		return
 	}
 
 	if cmd == "rem" {
+		if mb.mutedChannelID == "" {
+			mb.session.ChannelMessageSend(msgEv.ChannelID, "There is no place to remove simple talk policing.")
+			return
+		}
 		mb.mutedChannelID = ""
 		mb.session.ChannelMessageSend(msgEv.ChannelID, "Removed simple talk policing in this area.")
 		return
