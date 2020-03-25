@@ -6,7 +6,7 @@ A [Discord](https://discordapp.com/) bot inspired by [xkcd's Simple Writer](http
 ![Invite Ten Hundred Bot](https://i.imgur.com/4gF2uIe.png)
 
 # Usage
-`!th set` Only allows the 1000 most common words in the channel this is ran in.
+`!th set` Only allows the 1000 most common words in the channel this is ran in. Supports only one channel.
 
 `!th rem` Removes the restriction to the currently set channel.
 
