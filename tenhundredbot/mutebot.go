@@ -81,6 +81,10 @@ func (th *TenHundredBot) Serve(ctx context.Context) {
 		th.HandlerMessageCreate(sess, m)
 	})
 
+	dg.AddHandler(func(sess *discordgo.Session, m *discordgo.MessageUpdate) {
+		th.HandlerMessageEdit(sess, m)
+	})
+
 	err = dg.Open()
 	if err != nil {
 		fmt.Println("error opening connection,", err)
@@ -139,6 +143,7 @@ func inSlice(slice []string, s string) bool {
 	return false
 }
 
+// HandlerMessage create decides message removal and processes commands.
 func (th *TenHundredBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) {
 	defer th.mutex.Unlock()
 	th.mutex.Lock()
@@ -154,6 +159,20 @@ func (th *TenHundredBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *di
 	th.decideMessageRemoval(msgEv)
 }
 
+// HandlerMessageEdit decides message removal.
+func (th *TenHundredBot) HandlerMessageEdit(sess *discordgo.Session, msgUpdate *discordgo.MessageUpdate) {
+	defer th.mutex.Unlock()
+	th.mutex.Lock()
+	th.session = sess // sess is used later in other pointer receiver functions
+	msgCreate := &discordgo.MessageCreate{msgUpdate.Message}
+
+	if msgCreate.Author.ID == th.session.State.User.ID || msgCreate.GuildID == "" || msgCreate.GuildID != th.serverID{ // is bot's own message || is a PM/DM || is not of this guild
+		return
+	}
+
+	th.decideMessageRemoval(msgCreate)
+}
+
 func userCanAddBots(sess *discordgo.Session, userID, channelID string) bool {
 	aperms, err := sess.UserChannelPermissions(userID, channelID)
 	if err != nil {
@@ -163,7 +182,6 @@ func userCanAddBots(sess *discordgo.Session, userID, channelID string) bool {
 }
 
 func (th *TenHundredBot) decideMessageRemoval(msgEv *discordgo.MessageCreate) {
-
 	if inSlice(th.mutedUsers, msgEv.Author.ID) || msgEv.ChannelID == th.mutedChannelID {
 		badWords := badWords(msgEv, th.wordStore)
 		if !(len(badWords) > 0) {
@@ -392,5 +410,5 @@ func getWordStore(fileName string) *wordMap.WordMap {
 	return ws
 }
 
-// todo: combat against message edits
 // todo: allow punctuation and dashes
+// todo: delete if user is already muted or unmuted
