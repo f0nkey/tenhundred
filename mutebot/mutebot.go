@@ -1,4 +1,4 @@
-package muteBot
+package mutebot
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"tenhundredmuter/muteBot/wordMap"
+	"tenhundredmuter/mutebot/wordMap"
 )
 
 // MuteBot is used to restrict people to using only the words in the WordsFile field of struct MuteBotConfig.

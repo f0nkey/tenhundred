@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"strings"
-	"tenhundredmuter/muteBot"
+	"tenhundredmuter/mutebot"
 )
 
 type JSONConfig struct {
@@ -28,13 +28,13 @@ func main() {
 		}
 	}
 
-	mbconf := muteBot.MuteBotConfig{}
+	mbconf := mutebot.MuteBotConfig{}
 	err = json.Unmarshal(configBytes, &mbconf)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	mb := muteBot.NewMuteBot(mbconf)
+	mb := mutebot.NewMuteBot(mbconf)
 	updateJSONfile := func() {
 		updateJSONConfigFile(mbconf, mb.MutedUsers(), mb.MutedChannelID(), mb.ServerID())
 	}
@@ -60,7 +60,7 @@ func createDefaultConfigFile() {
 	ioutil.WriteFile("config.json", jsBytes, 0644)
 }
 
-func updateJSONConfigFile(mbconf muteBot.MuteBotConfig, mutedUsers []string, mutedChannelID, serverID string) {
+func updateJSONConfigFile(mbconf mutebot.MuteBotConfig, mutedUsers []string, mutedChannelID, serverID string) {
 	jsConf := JSONConfig{
 		WordsFile:      mbconf.WordsFile,
 		CommandPrefix:  mbconf.CommandPrefix,
