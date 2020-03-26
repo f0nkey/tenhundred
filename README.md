@@ -8,6 +8,8 @@ A [Discord](https://discordapp.com/) bot inspired by [xkcd's Simple Writer](http
 # Commands
 >`@TenHundredBot` can be used in place of `!th`
 
+> User IDs are interchangeable with mentions. `!th mute 197768883409649664` is valid.
+
 `!th set` Only allows the 1000 most common words in the channel this is ran in. Supports only one channel.
 
 `!th rem` Removes the restriction to the currently set channel.
@@ -18,7 +20,7 @@ A [Discord](https://discordapp.com/) bot inspired by [xkcd's Simple Writer](http
 
 `!th prefix (newPrefix)` Changes the prefix this bot responds to.
 
-> User IDs are interchangeable with mentions. `!th mute 197768883409649664` is valid.
+
 
 # Host Your Own
 1. `go build *.go` and run the built binary to generate config.json.
