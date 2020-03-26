@@ -34,18 +34,44 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if mbconf.BotToken == "" {
-		log.Fatal("No Bot Token in config.json. See the GitHub README.md for information on how to get a Bot Token.")
-	}
+
+	checkBlankFields(mbconf)
 
 	mb := tenhundredbot.NewTenHundredBot(mbconf)
-	updateJSONfile := func() {
-		updateJSONConfigFile(mbconf, mb.MutedUsers(), mb.MutedChannelID(), mb.ServerID(), mb.CommandPrefix(), mb.MaxMutedUsers())
-	}
-	mb.SetAfterUpdateFunc(updateJSONfile)
+	mb.SetAfterUpdateFunc(func() {
+		jsConf := JSONConfig{
+			WordsFile:      mbconf.WordsFile,
+			CommandPrefix:  mb.CommandPrefix(),
+			BotToken:       mbconf.BotToken,
+			ServerID:       mb.ServerID(),
+			MutedChannelID: mb.MutedChannelID(),
+			MutedUsers:     mb.MutedUsers(),
+			MaxMutedUsers:  mb.MaxMutedUsers(),
+		}
+		updateJSONConfigFile(jsConf)
+	})
 	mb.Serve(context.Background())
 }
 
+func checkBlankFields(mbconf tenhundredbot.TenHundredBotConfig) {
+	if mbconf.BotToken == "" {
+		log.Fatal("No Bot Token in config.json. See the GitHub README.md for information on how to get a Bot Token.")
+	}
+	if mbconf.ServerID == "" {
+		log.Fatal("No Server ID in config.json. See the GitHub README.md for information on how to get your Server ID.")
+	}
+}
+
+func updateJSONConfigFile(jsonConfig JSONConfig) {
+	jsonBytes, err := json.MarshalIndent(jsonConfig, "", "    ")
+	if err != nil {
+		log.Fatal("updateJSONfile", err)
+	}
+	err = ioutil.WriteFile("config.json", jsonBytes, 0644)
+	if err != nil {
+		log.Fatal("updateJSONfile", err)
+	}
+}
 func createDefaultConfigFile() {
 	def := JSONConfig{
 		WordsFile:      "wordList.txt", // wordList.txt taken from https://xkcd.com/simplewriter/words.js, removed "fuck" and "shit"
@@ -63,25 +89,4 @@ func createDefaultConfigFile() {
 	}
 
 	ioutil.WriteFile("config.json", jsBytes, 0644)
-}
-
-func updateJSONConfigFile(mbconf tenhundredbot.TenHundredBotConfig, mutedUsers []string, mutedChannelID, serverID, commandPrefix string, maxMutedUsers int) {
-	jsConf := JSONConfig{
-		WordsFile:      mbconf.WordsFile,
-		CommandPrefix:  commandPrefix,
-		BotToken:       mbconf.BotToken,
-		ServerID:       serverID,
-		MutedChannelID: mutedChannelID,
-		MutedUsers:     mutedUsers,
-		MaxMutedUsers:  maxMutedUsers,
-	}
-
-	jsonBytes, err := json.MarshalIndent(jsConf, "", "    ")
-	if err != nil {
-		log.Fatal("updateJSONfile", err)
-	}
-	err = ioutil.WriteFile("config.json", jsonBytes, 0644)
-	if err != nil {
-		log.Fatal("updateJSONfile", err)
-	}
 }
