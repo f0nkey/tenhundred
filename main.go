@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"strings"
-	"tenhundredmuter/tenhundredbot"
+	"tenhundred/tenhundredbot"
 )
 
 type JSONConfig struct {
