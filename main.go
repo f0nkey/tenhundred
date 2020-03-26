@@ -35,7 +35,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	checkBlankFields(mbconf)
+	logFatalBlankFields(mbconf)
 
 	mb := tenhundredbot.NewTenHundredBot(mbconf)
 	mb.SetAfterUpdateFunc(func() {
@@ -53,7 +53,7 @@ func main() {
 	mb.Serve(context.Background())
 }
 
-func checkBlankFields(mbconf tenhundredbot.TenHundredBotConfig) {
+func logFatalBlankFields(mbconf tenhundredbot.TenHundredBotConfig) {
 	if mbconf.BotToken == "" {
 		log.Fatal("No Bot Token in config.json. See the GitHub README.md for information on how to get a Bot Token.")
 	}
