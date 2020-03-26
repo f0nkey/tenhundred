@@ -1,4 +1,7 @@
+// Package tenhundredbot provides a Discord bot that allows only the 1000 most used words in a channel or "mutes" a user to those words.
 package tenhundredbot
+
+// todo: allow punctuation and dashes
 
 import (
 	"context"
@@ -29,18 +32,25 @@ type TenHundredBot struct {
 type TenHundredBotConfig struct {
 	// The only words a muted user is allowed to say.
 	WordsFile string `json:"wordsFile"`
+
 	// Command prefix this bot listens to.
 	CommandPrefix string `json:"commandPrefix"`
+
 	// BotToken provided by Discord.
 	BotToken string `json:"botToken"`
+
 	// ServerID this specific bot operates on.
 	ServerID string `json:"serverID"`
+
 	// Muted User IDs that can only talk with the words in WordsFile.
 	MutedUsers []string `json:"mutedUsers"`
+
 	// Max users that can be muted at the same time.
 	MaxMutedUsers int `json:"maxMutedUsers"`
+
 	// Channel where everyone is restricted to words in WordsFile.
 	MutedChannelID string `json:"mutedChannelID"`
+	
 	// Called after every change to MutedUsers.
 	AfterUserUpdate func()
 }
@@ -94,6 +104,36 @@ func (th *TenHundredBot) Serve(ctx context.Context) {
 	<-ctx.Done()
 }
 
+// HandlerMessage create decides message removal and processes commands.
+func (th *TenHundredBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) {
+	defer th.mutex.Unlock()
+	th.mutex.Lock()
+	th.session = sess                                                                                       // sess is used later in other pointer receiver functions
+	if msgEv.Author.ID == th.session.State.User.ID || msgEv.GuildID == "" || msgEv.GuildID != th.serverID { // is bot's own message || is a PM/DM || is not of this guild
+		return
+	}
+
+	if hasPrefix(th, msgEv.Content) && userCanAddBots(sess, msgEv.Author.ID, msgEv.ChannelID) {
+		th.processCommands(msgEv)
+		return
+	}
+	th.decideMessageRemoval(msgEv)
+}
+
+// HandlerMessageEdit decides message removal.
+func (th *TenHundredBot) HandlerMessageEdit(sess *discordgo.Session, msgUpdate *discordgo.MessageUpdate) {
+	defer th.mutex.Unlock()
+	th.mutex.Lock()
+	th.session = sess // sess is used later in other pointer receiver functions
+	msgCreate := &discordgo.MessageCreate{msgUpdate.Message}
+
+	if msgCreate.Author.ID == th.session.State.User.ID || msgCreate.GuildID == "" || msgCreate.GuildID != th.serverID { // is bot's own message || is a PM/DM || is not of this guild
+		return
+	}
+
+	th.decideMessageRemoval(msgCreate)
+}
+
 // MutedUsers returns the serverID associated with this bot.
 func (th *TenHundredBot) ServerID() string {
 	return th.serverID
@@ -141,36 +181,6 @@ func inSlice(slice []string, s string) bool {
 		}
 	}
 	return false
-}
-
-// HandlerMessage create decides message removal and processes commands.
-func (th *TenHundredBot) HandlerMessageCreate(sess *discordgo.Session, msgEv *discordgo.MessageCreate) {
-	defer th.mutex.Unlock()
-	th.mutex.Lock()
-	th.session = sess                                                                                       // sess is used later in other pointer receiver functions
-	if msgEv.Author.ID == th.session.State.User.ID || msgEv.GuildID == "" || msgEv.GuildID != th.serverID { // is bot's own message || is a PM/DM || is not of this guild
-		return
-	}
-
-	if hasPrefix(th, msgEv.Content) && userCanAddBots(sess, msgEv.Author.ID, msgEv.ChannelID) {
-		th.processCommands(msgEv)
-		return
-	}
-	th.decideMessageRemoval(msgEv)
-}
-
-// HandlerMessageEdit decides message removal.
-func (th *TenHundredBot) HandlerMessageEdit(sess *discordgo.Session, msgUpdate *discordgo.MessageUpdate) {
-	defer th.mutex.Unlock()
-	th.mutex.Lock()
-	th.session = sess // sess is used later in other pointer receiver functions
-	msgCreate := &discordgo.MessageCreate{msgUpdate.Message}
-
-	if msgCreate.Author.ID == th.session.State.User.ID || msgCreate.GuildID == "" || msgCreate.GuildID != th.serverID { // is bot's own message || is a PM/DM || is not of this guild
-		return
-	}
-
-	th.decideMessageRemoval(msgCreate)
 }
 
 func userCanAddBots(sess *discordgo.Session, userID, channelID string) bool {
@@ -243,7 +253,7 @@ func (th *TenHundredBot) processCommands(msgEv *discordgo.MessageCreate) {
 	}
 
 	if len(msg) >= 3 {
-		thirdArgument := parseUserID(msg[2])
+		thirdArgument := parsedUserID(msg[2])
 
 		if cmd == "prefix" {
 			th.commandPrefix = thirdArgument
@@ -324,7 +334,7 @@ func (th *TenHundredBot) muteProcedure(targetUser string, msgEv *discordgo.Messa
 	return
 }
 
-func (th *TenHundredBot) muteUser(targetUser string) (alreadyMuted bool) {
+func (th *TenHundredBot) muteUser(targetUser string) (alreadyMuted bool) { // codereview: return an error or return bool?
 	if inSlice(th.mutedUsers, targetUser) {
 		return true
 	}
@@ -378,7 +388,7 @@ func sendPMHelp(session *discordgo.Session, userID string, cmdPrefix string) {
 	sendPrivateMessage(session, userID, line0+line1+cmd1+cmd2+cmd3+cmd4+cmd5)
 }
 
-func parseUserID(s string) string {
+func parsedUserID(s string) string {
 	mentionPrefix := "<@!"
 	if len(s) > len(mentionPrefix) && s[:len(mentionPrefix)] == mentionPrefix { // they sent a mention
 		return s[len(mentionPrefix) : len(s)-1]
@@ -409,5 +419,3 @@ func getWordStore(fileName string) *wordMap.WordMap {
 	}
 	return ws
 }
-
-// todo: allow punctuation and dashes
