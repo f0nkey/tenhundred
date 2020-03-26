@@ -50,7 +50,7 @@ type TenHundredBotConfig struct {
 
 	// Channel where everyone is restricted to words in WordsFile.
 	MutedChannelID string `json:"mutedChannelID"`
-	
+
 	// Called after every change to MutedUsers.
 	AfterUserUpdate func()
 }
@@ -159,7 +159,7 @@ func (th *TenHundredBot) MaxMutedUsers() int {
 	return th.maxMutedUsers
 }
 
-// SetAfterUpdateFunc sets the update function ran after the slice of muted users updates.
+// SetAfterUpdateFunc sets the update function ran after the slice of muted users updates. Should be set immediately after NewTenHundredBot.
 func (th *TenHundredBot) SetAfterUpdateFunc(update func()) {
 	th.AfterUserUpdate = update
 }
