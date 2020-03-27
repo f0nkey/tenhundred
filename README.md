@@ -3,14 +3,14 @@ A [Discord](https://discordapp.com/) bot inspired by [xkcd's Simple Writer](http
 - Set a channel where only the 1000(ten hundred) most common words in English can be used.
 - "Mutes" a user, restricting them to the 1000 most common words.
 
-![Invite Ten Hundred Bot](https://i.imgur.com/4gF2uIe.png)
+[<img alt="Invite TenHundredBot" src="https://i.imgur.com/4gF2uIe.png">](https://discordapp.com/oauth2/authorize?client_id=689342935577395220&scope=bot&permissions=76816)
 
 # Commands
 >`@TenHundredBot` can be used in place of `!th`
 
 > User IDs are interchangeable with mentions. `!th mute 197768883409649664` is valid.
 
-`!th set` Only allows the 1000 most common words in the channel this is ran in. Supports only one channel.
+`!th set` Restricts all users to the 1000 most common words for the channel this is ran in. Only one channel can be set.
 
 `!th rem` Removes the restriction to the currently set channel.
 
